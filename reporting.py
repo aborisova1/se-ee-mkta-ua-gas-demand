@@ -119,9 +119,9 @@ input_3=None, description_3=None):
 # %%
 if __name__ == '__main__':
 
-    print(get_email_distro_list('live'))
-    print(get_email_distro_list('test'))
-    print(get_email_distro_list('dev'))
+    print(f"Recipients when goes live: {get_email_distro_list('live')}")
+    print(f"Recipients during testing: {get_email_distro_list('test')}")
+    print(f"Recipients during development: {get_email_distro_list('dev')}")
 
     # Testing email
     send_date = dt.date.today()
