@@ -116,10 +116,17 @@ prevforecast.index = pd.to_datetime(prevforecast.index)
 
 #calculate day-on-day change
 dod = pd.DataFrame((prevforecast['DEM_FCST']-comp['DEM_FCST']).dropna())
+dod = dod.rename(columns ={'DEM_FCST':'UA'})
+dod.index = dod.index.date
+dod.loc['Total']= dod.sum(numeric_only=True, axis=0)
+
+comp = comp.rename(columns ={'DEM_FCST':'UA'})
+newfcst =pd.DataFrame(comp['UA'])
+
 
 #Print the results (we should add this to our daily emails)
-print('Day-on-day change:')
-print(dod.round())
+print('Day-on-day change ('+datetime.today().strftime("%d-%b-%Y") +" vs " +prevdate.strftime("%d-%b-%Y") +') (mcm/d):')
+print(dod.round(1))
 
-print('Current forecast:')
-print(comp['DEM_FCST'].round(1))
+print('Current forecast (mcm/d):')
+print(newfcst.round(1))
