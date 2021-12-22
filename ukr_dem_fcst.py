@@ -161,3 +161,22 @@ plt.show()
 # print('Notes:')
 # print('1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec')
 # print('2) Previous forecast refers to the forecast generated on the previous business day')
+
+if __name__ == '__main__':
+
+    from reporting import *
+
+    send_date = dt.date.today()
+
+    html = """<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">
+    Notes:
+                                </p><br>"""
+    html += """<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">
+    1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec
+                                </p><br>"""
+    html += """<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">
+    2) Previous forecast refers to the forecast generated on the previous business day
+                                </p><br>"""
+
+    send_email_alert(subject='Testing email sent on %(send_date)s' % {'send_date':send_date}, distro='dev',
+    input_1=output, description_1='Ukraline Gas Demand')  
