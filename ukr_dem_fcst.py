@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, date
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 load_dotenv()
 
 import warnings
@@ -148,6 +149,9 @@ output.loc['Total:'] =''
 output.at['Total:', 'Current forecast vs previous forecast'] = change1
 output.at['Total:', 'Current forecast vs seasonal normal demand'] = change2
 
+fof = pd.DataFrame(output['Current forecast vs previous forecast'][:-2].astype(float))
+fos = pd.DataFrame(output['Current forecast vs seasonal normal demand'][:-2].astype(float))
+
 print(output)
 print('Notes:')
 print('1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec')
@@ -161,3 +165,23 @@ plt.show()
 # print('Notes:')
 # print('1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec')
 # print('2) Previous forecast refers to the forecast generated on the previous business day')
+
+if __name__ == '__main__':
+
+    from reporting import *
+
+    send_date = dt.date.today()
+
+    html = """<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">
+    Notes:
+                                </p><br>"""
+    html += """<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">
+    1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec
+                                </p><br>"""
+    html += """<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">
+    2) Previous forecast refers to the forecast generated on the previous business day
+                                </p><br>"""
+
+    send_email_alert(subject='Testing email sent on %(send_date)s' % {'send_date':send_date}, distro='test',
+    input_1=html,
+    input_2=output, description_2='Ukraline Gas Demand')
