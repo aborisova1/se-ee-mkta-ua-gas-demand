@@ -149,6 +149,9 @@ output.loc['Total:'] =''
 output.at['Total:', 'Current forecast vs previous forecast'] = change1
 output.at['Total:', 'Current forecast vs seasonal normal demand'] = change2
 
+fof = pd.DataFrame(output['Current forecast vs previous forecast'][:-2].astype(float))
+fos = pd.DataFrame(output['Current forecast vs seasonal normal demand'][:-2].astype(float))
+
 print(output)
 print('Notes:')
 print('1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec')
