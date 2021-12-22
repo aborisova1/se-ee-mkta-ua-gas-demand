@@ -13,8 +13,10 @@ import warnings
 warnings.filterwarnings("ignore")
 
 #function to pull data from systradingmarketdata
+#https://systradingmarketdataapi.azurewebsites.net/index.html
+#start_Date and end_date are required parameters unlike what is stated in Swagger
 
-def get_marketdata(start_datetime, end_datetime, analysis_group):
+def get_marketdata_ag(as_of_date, start_datetime, end_datetime, analysis_group, curve_name):
     #define the basic parameters of the API call
     baseurl = "https://systradingmarketdataapi.azurewebsites.net/api/"
     url = f"{baseurl}Authentication/request"
@@ -25,25 +27,25 @@ def get_marketdata(start_datetime, end_datetime, analysis_group):
       'Content-Type': 'application/json',
     }
     
-    # get the token
+   # get the token
     login_response = requests.request("POST", url, headers=headers, data=payload)
-    
-    params = f"start={start_datetime}&end={end_datetime}&granularity=hours&timeZone=GMT"
-    #analysis_group = "1Base_EC%20Generation%20by%20Fuel%20Type"
-    group_url = f'{baseurl}AnalysisGroup/AllCurves/{analysis_group}?{params}'
+    #print(login_response.text)
+
+    #params = f"asOfDate={as_of_date}&granularity=hours&timeZone=GMT"
+    params = f"start={start_datetime}&end={end_datetime}&asOfDate={as_of_date}&granularity=hours&timeZone=GMT"
+    group_url = f'{baseurl}AnalysisGroup/{analysis_group}/{curve_name}?{params}'
+    #print(group_url)
 
     payload={}
     headers = {
       'Authorization': f'Bearer {login_response.text}',
     }
-
+    #print(group_url)
     response = requests.request("GET", group_url, headers=headers, data=payload)
-
-    #print out the json
     #print(response.text)
-    # %%
 
     power_json = json.loads(response.text)
+    #print(power_json)
 
     # loading hour sequence from the maximum and minimum found - it's not yet clear
     # the logic for the cut off date times.
@@ -53,7 +55,8 @@ def get_marketdata(start_datetime, end_datetime, analysis_group):
     hour_sequence = pd.date_range(start = pd.to_datetime(min_found_time),
                              end = pd.to_datetime(max_found_time),
                              freq = "H")
-    # %%
+
+     # %%
     # create named dataframe from json
     def turn_series_to_df(json_series):
         this_df = pd.DataFrame.from_records(json_series['timeSeries'])
@@ -73,60 +76,79 @@ def get_marketdata(start_datetime, end_datetime, analysis_group):
 
     for full_series in power_json['curves'][1:]:
         this_df = turn_series_to_df(full_series)
-        power_df = pd.merge(power_df,this_df,how='left', left_index=True, right_index=True)
-
+        power_df = pd.merge(power_df,this_df,how='left', left_index=True, right_index=True)                            
     return power_df
 
 
+    #re-format the output of the previous function
+def reformat (ce):
+    ce = ce.resample(rule='24H', closed='left', label='left', base=5).mean().round(1)
+    ce = ce.iloc[:-1,:]
+    ce['date'] = ce.apply(lambda x: datetime(x.name.year, x.name.month, x.name.day), axis = 1)
+    ce = ce.set_index('date')
+    ce=ce.rename(columns={ce.columns[0]:'Temp_fcst'})
+    return ce
+
 #Pull the data and produce the forecast
+end = (datetime.today() + timedelta(days = 15)).replace(hour = 0, minute = 0, second=0, microsecond=0)
+start = datetime.today().replace(hour = 5, minute = 0, second=0, microsecond=0)
+asof = (datetime.today()).replace(hour = 3, minute = 0, second=0, microsecond=0)
 
-dt14 = datetime.today() + timedelta(days = 15)
-dt14=datetime(dt14.year,dt14.month,dt14.day)
-
-ce = get_marketdata(datetime(2021,10,1), dt14, 'weather_CEE')
+fcst = get_marketdata_ag(asof, start, end, 'weather_CEE', 'ModelAPI.MAGMA.Kyiv.Temperature.Hourly.UTC')
+fcst = reformat(fcst)
 
 
-ce = ce.resample(rule='24H', closed='left', label='left', base=5).mean().round(1)
-ce['date'] = ce.apply(lambda x: datetime(x.name.year, x.name.month, x.name.day), axis = 1)
-ce = ce.set_index('date')
-ce = ce.rename(columns = {ce.columns[0]:'obs_Kyiv', ce.columns[1]:'fcst_Kyiv'})
-#ce = ce.set_index['date']
-comp = pd.DataFrame(index =pd.date_range(start = datetime.today(), end = dt14+ timedelta(days =-1)), columns = ['FCST'])
-comp = comp.resample('D').last()
-comp['FCST'] = comp.apply(lambda x: ce['fcst_Kyiv'][ce.index==x.name].iloc[0], axis = 1) # if ((x.name >= datetime.today()) & ((x.name - datetime.today()).days<14)) else np.nan
+#Pull the previous weather forecast
+if datetime.today().weekday() == 0:
+   daysdelta = -3
+else:
+    daysdelta = -1
 
+end1 = end + timedelta(days = daysdelta)
+start1 = start + timedelta(days = daysdelta)
+asof1 = asof + timedelta(days = daysdelta)
+
+fcst_prev = get_marketdata_ag(asof1, start1, end1, 'weather_CEE', 'ModelAPI.MAGMA.Kyiv.Temperature.Hourly.UTC')
+fcst_prev = reformat(fcst_prev)
+
+
+#Apply coefs
 coefs = pd.read_csv('coef.csv')
 slope = coefs['slope'].iloc[0]
 inter = coefs['intercept'].iloc[0]
 
-comp['DEM_FCST'] = comp['FCST'] * slope  + inter + 3.75
+fcst['Current forecast'] = fcst['Temp_fcst'] * slope  + inter + 3.75
+fcst['Current forecast'] = fcst['Current forecast'].round(1)
 
-#save the output in the folder
-#!!! This part needs to be re-written as the output should be saved in the database
-comp.to_csv('output/forecast_'+datetime.today().strftime("%Y-%m-%d")+'.csv')
-
-
-#compare with the previous forecast
-
-#!!! this part should be re-written as we should pull the previous forecast from the database
-prevdate = datetime.now()+timedelta(days = -3) if datetime.today().weekday() == 0 else datetime.now()+timedelta(days = -1)
-prevforecast = pd.read_csv('output/forecast_'+prevdate.strftime("%Y-%m-%d")+'.csv', index_col =0)
-prevforecast.index = pd.to_datetime(prevforecast.index)
-#prevdate = datetime(prevdate.year, prevdate.month, prevdate.day)
-
-#calculate day-on-day change
-dod = pd.DataFrame((comp['DEM_FCST'] - prevforecast['DEM_FCST']).dropna())
-dod = dod.rename(columns ={'DEM_FCST':'UA'})
-dod.index = dod.index.date
-dod.loc['Total']= dod.sum(numeric_only=True, axis=0)
-
-comp = comp.rename(columns ={'DEM_FCST':'UA'})
-newfcst =pd.DataFrame(comp['UA'])
+fcst_prev['Previous forecast'] = fcst_prev['Temp_fcst'] * slope  + inter + 3.75
+fcst_prev['Previous forecast'] = fcst_prev['Previous forecast'].round(1)
 
 
-#Print the results (we should add this to our daily emails)
-print('Day-on-day change ('+datetime.today().strftime("%d-%b-%Y") +" vs " +prevdate.strftime("%d-%b-%Y") +') (mcm/d):')
-print(dod.round(1))
+#Prepare the output table
+output = pd.concat([fcst, fcst_prev['Previous forecast']], axis = 1)
 
-print('Current forecast (mcm/d):')
-print(newfcst.round(1))
+
+#Pull (adjusted) normal demand
+normal = pd.read_csv('30_yr_av_demand.csv', index_col = 0)
+normal.index = pd.to_datetime(normal.index, format='%d/%m/%Y')# format='%d%m%Y'
+normal = normal.round(1)
+normal = normal.rename(columns = {normal.columns[0]:'SND'})
+
+output = pd.concat([output, normal], axis=1, join="inner")
+output['Current forecast vs previous forecast'] = output['Current forecast'] - output['Previous forecast']
+output['Current forecast vs seasonal normal demand'] = output['Current forecast'] - output['SND']
+
+output = output.iloc[1:,:]
+output.index = output.index.date
+
+change1 = output['Current forecast vs previous forecast'].sum()
+change2 = output['Current forecast vs seasonal normal demand'].sum()
+
+output.loc['Total:'] =''
+output.at['Total:', 'Current forecast vs previous forecast'] = change1
+output.at['Total:', 'Current forecast vs seasonal normal demand'] = change2
+
+print(output)
+print('Notes:')
+print('1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec')
+print('2) Previous forecast refers to the forecast generated on the previous business day')
