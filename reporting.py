@@ -80,22 +80,48 @@ def read_forcast(output_dir, forecast_date):
     return df
 
 # %%
-def send_email_alert(subject='Testing email', distro='dev', input_1=None, description_1=None, input_2=None, description_2=None):    
+def send_email_alert(subject='Testing email', distro='dev',
+input_1=None, description_1=None,
+input_2=None, description_2=None,
+input_3=None, description_3=None):    
 
-    if (input_1 is None) and (input_2 is None):
+    if (input_1 is None) and (input_2 is None) and (input_3 is None):
         print("Input is not provided")
     else:
-        html = f"""<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">{description_1}</p><br>"""
-        html += input_1.to_html()
+        html = ""
+        if input_1 is not None:
+            if isinstance(input_1, str):
+                html += input_1                
+            else:
+                html += f"""<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">{description_1}</p><br>"""                
+                if isinstance(input_1, pd.DataFrame):
+                    html += input_1.to_html()
+
         if input_2 is not None:
-            html += f"""<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">{description_2}</p><br>"""
-            html += input_2.to_html()
+            if isinstance(input_2, str):
+                html += input_2                
+            else:
+                html += f"""<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">{description_2}</p><br>"""                
+                if isinstance(input_2, pd.DataFrame):
+                    html += input_2.to_html()
+
+        if input_3 is not None:
+            if isinstance(input_3, str):
+                html += input_3                
+            else:
+                html += f"""<br><p style="font-family:Arial, sans-serif;font-size:14px;font-weight:bold">{description_3}</p><br>"""                
+                if isinstance(input_3, pd.DataFrame):
+                    html += input_3.to_html()
 
     send_email_using_mailjet(html, distro, subject=subject)
     print("Sending email alert completed ...")
 
 # %%
 if __name__ == '__main__':
+
+    print(get_email_distro_list('live'))
+    print(get_email_distro_list('test'))
+    print(get_email_distro_list('dev'))
 
     # Testing email
     send_date = dt.date.today()
@@ -113,6 +139,8 @@ if __name__ == '__main__':
     send_email_alert(subject='Testing email sent on %(send_date)s' % {'send_date':send_date}, distro='dev',
     input_1=df_1, description_1='Sample table 1',
     input_2=df_2, description_2='Sample table 2')
+
+    send_email_alert(subject='Testing email sent on %(send_date)s' % {'send_date':send_date}, distro='dev',
+    input_1='Sample text',
+    input_2=df_2, description_2='Sample table')
     
-
-
