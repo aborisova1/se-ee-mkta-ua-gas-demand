@@ -148,7 +148,16 @@ output.loc['Total:'] =''
 output.at['Total:', 'Current forecast vs previous forecast'] = change1
 output.at['Total:', 'Current forecast vs seasonal normal demand'] = change2
 
-output
+print(output)
 print('Notes:')
 print('1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec')
 print('2) Previous forecast refers to the forecast generated on the previous business day')
+sns.heatmap(fof,cmap='RdBu_r', vmin=-20, vmax=20)
+plt.show()
+sns.heatmap(fos,cmap='RdBu_r', vmin=-20, vmax=20)
+plt.show()
+
+# output
+# print('Notes:')
+# print('1) SND - seasonal normal demand adjusted for demand destruction observed between 1 Nov and 15 Dec')
+# print('2) Previous forecast refers to the forecast generated on the previous business day')
