@@ -182,5 +182,6 @@ if __name__ == '__main__':
     2) Previous forecast refers to the forecast generated on the previous business day
                                 </p><br>"""
 
-    send_email_alert(subject='Testing email sent on %(send_date)s' % {'send_date':send_date}, distro='dev',
-    input_1=output, description_1='Ukraline Gas Demand')  
+    send_email_alert(subject='Testing email sent on %(send_date)s' % {'send_date':send_date}, distro='test',
+    input_1=html,
+    input_2=output, description_2='Ukraline Gas Demand')
