@@ -115,7 +115,7 @@ prevforecast.index = pd.to_datetime(prevforecast.index)
 #prevdate = datetime(prevdate.year, prevdate.month, prevdate.day)
 
 #calculate day-on-day change
-dod = pd.DataFrame((prevforecast['DEM_FCST']-comp['DEM_FCST']).dropna())
+dod = pd.DataFrame((comp['DEM_FCST'] - prevforecast['DEM_FCST']).dropna())
 dod = dod.rename(columns ={'DEM_FCST':'UA'})
 dod.index = dod.index.date
 dod.loc['Total']= dod.sum(numeric_only=True, axis=0)
